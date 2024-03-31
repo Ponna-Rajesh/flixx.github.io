@@ -6,7 +6,6 @@ const options = {
     }
   };
 
-
 // popular movies
 async function displayPopularMovies(){
     const data = await fetchAPIData('movie/popular');
@@ -224,27 +223,27 @@ function displayBackgroungImage(type, backgroundPath){
 //Search Movies / Show
 async function search(){
   const queryString = window.location.search;
-  // console.log(queryString)
   const urlParams = new URLSearchParams(queryString)
-  // console.log(urlParams)
-  // console.log(urlParams.get('type'))
-  // console.log(urlParams.get('search-term'))
+
   global.search.type = urlParams.get('type')
   global.search.term = urlParams.get('search-term')
 
   if(global.search.term !== '' && global.search.term !== null){
-    //@ to do make the request and display results
-    const {results , total_pages, page} = await searchAPIData();
-    // console.log(results)
+    const {results , total_pages, page, total_results } = await searchAPIData();
+    const a = await searchAPIData();
+    console.log(a)
 
-    displaySearchResults(results);
+    global.search.page = page;
+    global.search.totalPages = total_pages;
+    global.search.totalResults = total_results;
 
-    document.querySelector('#search-term').value = '';
 
     if(results.length === 0){
       showAlert('No results found')
       return;
     }
+    document.querySelector('#search-term').value = '';
+    displaySearchResults(results);
 
   }else{
     showAlert("Please enter a search term")
@@ -252,6 +251,12 @@ async function search(){
 }
 
 function displaySearchResults(results){
+  // Clear previous Results
+  document.querySelector('#search-results').innerHTML = '';
+  document.querySelector('#search-results-heading').innerHTML = '';
+  document.querySelector('#pagination').innerHTML = '';
+
+
   results.forEach( (result) => {
     let div = document.createElement('div')
     div.classList.add('card')
@@ -276,44 +281,55 @@ function displaySearchResults(results){
       <small class="text-muted">Release: ${global.search.type === 'movie' ? result.release_date : result.first_air_date}</small>
     </p>`;  
 
-    document.getElementById("search-results").appendChild(div)
+    document.querySelector("#search-results-heading").innerHTML = `
+    <h2>${results.length} of ${global.search.totalResults} Results for ${global.search.term}</h2>
+    `
+
+    document.querySelector("#search-results").appendChild(div);
 });
+
+displayPagination();
+
 }
 
+//Create & Display Pagination For Search 
+function displayPagination(){
+ const div = document.createElement('div');
+ div.classList.add('pagination');
+ div.innerHTML = `
+          <button class="btn btn-primary" id="prev">Prev</button>
+          <button class="btn btn-primary" id="next">Next</button>
+          <div class="page-counter">Page ${global.search.page} of ${global.search.totalPages}</div>
+ `;
 
-// popular tv shows
-async function displayPopularShows(){
-    const data = await fetchAPIData('tv/popular');
-    console.log(data.results)
+ document.querySelector('#pagination').appendChild(div)
 
-    data.results.forEach( show => {
-        let div = document.createElement('div')
-        div.classList.add('card')
-        div.innerHTML = `<a href="tv-details.html?id=${show.id}">
-        ${
-            show.poster_path
-             ? ` <img
-            src="https://image.tmdb.org/t/p/w500${show.poster_path}"
-            class="card-img-top"
-            alt="${show.name}"
-          />` : ` <img
-          src="../images/no-image.jpg"
-          class="card-img-top"
-          alt="${show.name}"
-        />`
-        }
-       
-      </a>
-      <div class="card-body">
-        <h5 class="card-title">${show.name}</h5>
-        <p class="card-text">
-          <small class="text-muted">Release: ${show.first_air_date}</small>
-        </p>`;  
+ //Disable prev button if on first page
+ if(global.search.page === 1 ){
+  document.querySelector('#prev').disabled = true;
+ }
 
-        document.getElementById("popular-shows").appendChild(div)
+  //Disable next button if on last page
+ if(global.search.page === global.search.totalPages ){
+  document.querySelector('#next').disabled = true;
+ }
+
+ //Next page
+ document.querySelector('#next').addEventListener('click', async () => {
+  global.search.page++;
+  const {results, total_pages } = await searchAPIData()
+  displaySearchResults(results);
+
+})
+
+ //pre page
+ document.querySelector('#prev').addEventListener('click', async () => {
+  global.search.page--;
+  const {results, total_pages } = await searchAPIData()
+  displaySearchResults(results);
+
+})
 }
-)}
-
 
 
 //Display Slider Movies
@@ -381,7 +397,7 @@ async function searchAPIData(){
   const API_URL = global.api.apiUrl;
   showSpinner()
   const response = await fetch(
-      `${API_URL}search/${global.search.type}?language=en-US&query=${global.search.term}`, options
+      `${API_URL}search/${global.search.type}?language=en-US&query=${global.search.term}&page=${global.search.page}`, options
   );
   const data = await response.json()
   hideSpinner()
@@ -405,7 +421,8 @@ const global ={
       term: '',
       type: '',
       page: 1,
-      totalPages: 1
+      totalPages: 1,
+      totalResults: 0
     },
     api:{
       apiKey: '8b0a1afcacb6f48d1cc55cb50a3b3e7c',
@@ -463,10 +480,3 @@ function init(){
 highlightActiveLink()
 }
 document.addEventListener('DOMContentLoaded' , init)
-
-
-
-
-
-
-
