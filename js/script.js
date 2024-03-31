@@ -6,7 +6,7 @@ const options = {
     }
   };
 
-alert ("Hi")
+
 // popular movies
 async function displayPopularMovies(){
     const data = await fetchAPIData('movie/popular');
